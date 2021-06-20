@@ -92,8 +92,6 @@ def trade_huobi(coin, exchange):
             break
 
 
-sys.exit(0)
-
 def init():
     coininfo = binance_spot.sapiGetCapitalConfigGetall()
     for i in coininfo:

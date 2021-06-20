@@ -2,6 +2,7 @@ import ccxt
 import json
 import time
 import requests
+import sys
 
 config = json.load(open('config.json'))
 
@@ -30,12 +31,16 @@ def sendmsg(text):
         }
     }
     r = requests.post(url, params = params, json = data)
-    print(r.url)
     print(r.json())
 
+
+
 binance_spot = ccxt.binance(config["binance"])
-okex_spot = ccxt.okex()
-huobipro_spot = ccxt.huobipro()
+binance_spot.load_markets()
+okex_spot = ccxt.okex5(config["okex"])
+okex_spot.load_markets()
+huobipro_spot = ccxt.huobipro(config["huobi"])
+huobipro_spot.load_markets()
 
 binance_old_coin = []
 binance_new_coin = []
@@ -47,18 +52,57 @@ huobipro_symbols = []
 
 count = 0
 
+def trade_okex(coin, exchange):
+    pair = coin + "-USDT"
+    for symbol in exchange.markets:
+        if pair in symbol:
+            print(exchange, "has new coin list: ", pair)
+            maxSize = exchange.private_get_account_max_size({"instId": pair, "tdMode": "cash"})
+            maxBuyAmount = float(maxSize["data"][0]["maxBuy"])
+            if maxBuyAmount > 0:
+                exchange.private_post_trade_order({
+                    "instId": pair,
+                    "tdMode":"cash",
+                    "side":"buy",
+                    "ordType":"market",
+                    "sz": str(maxBuyAmount * 0.8)
+                })
+            break
+
+def trade_huobi(coin, exchange):
+    pair = coin + "/USDT"
+    for symbol in exchange.markets:
+        #print(symbol)
+        if pair in symbol:
+            print(exchange, "has new coin list: ", pair)
+            price = exchange.fetch_order_book(pair)['asks'][0][0]
+            account_id = exchange.private_get_account_accounts()
+            id = 0
+            for item in account_id["data"]:
+                if "spot" == item["type"]:
+                    id = item["id"]
+            balance = exchange.private_get_account_accounts_id_balance({"id": id})
+            usdamount = 0
+            for item in balance["data"]["list"]:
+                if "usdt" in item["currency"] and item["type"] == "trade":
+                    usdamount = item["balance"]
+            maxBuyAmount = int(float(usdamount) / float(price) * 0.01)
+            print(maxBuyAmount)
+            exchange.createMarketBuyOrder(pair, maxBuyAmount)
+            break
+
+
+sys.exit(0)
+
 def init():
-    binance_spot.load_markets()
     coininfo = binance_spot.sapiGetCapitalConfigGetall()
     for i in coininfo:
         binance_old_coin.append(i["coin"])
-
-    okex_spot.load_markets()
+    
     for symbol in okex_spot.markets:
         if "USDT" in symbol:
             okex_old_symbols.append(symbol)
-
-    huobipro_spot.load_markets()
+  
     for symbol in huobipro_spot.markets:
         if "USDT" in symbol:
             huobipro_old_symbols.append(symbol)
@@ -68,7 +112,7 @@ init()
 while True:
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "START.....")
     time.sleep(5)
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "list coin count:", count)
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "list new coin count:", count)
     
     try:
         binance_spot.load_markets()
@@ -89,12 +133,14 @@ while True:
             count = count + 1
             text = "Binance list new coin: " + str(coin_diff)
             sendmsg(text)
+            trade_okex(coin_diff[0], okex_spot)
+            trade_huobi(coin_diff[0], huobipro_spot)
         else:
             print("No new coin!")
 
     except Exception as err:
         print(err)
-        sendmsg(err)
+        sendmsg(str(err))
         pass
 
     try:
@@ -118,7 +164,7 @@ while True:
             print("No new coin!")
     except Exception as err:
         print(err)
-        sendmsg(err)
+        sendmsg(str(err))
         pass
 
     try:
@@ -142,7 +188,7 @@ while True:
             print("No new coin!")
     except Exception as err:
         print(err)
-        sendmsg(err)
+        sendmsg(str(err))
         pass
 
 

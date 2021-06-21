@@ -52,6 +52,24 @@ huobipro_symbols = []
 
 count = 0
 
+def trade_binance(coin, exchange):
+    pair = coin + "/USDT"
+    for symbol in exchange.markets:
+        if pair == symbol:
+            print(exchange, "has new coin list: ", pair)
+            price = exchange.fetch_order_book(pair)['asks'][0][0]
+            account = exchange.private_get_account()
+            usdamount = 0
+            for item in account["balances"]:
+                if item["asset"] == "USDT":
+                    usdamount = item["free"]
+            maxBuyAmount = int(float(usdamount) / float(price) * 0.8)
+                    
+            print(price, maxBuyAmount)
+            exchange.createMarketBuyOrder(pair, maxBuyAmount)
+            break
+
+
 def trade_okex(coin, exchange):
     pair = coin + "-USDT"
     for symbol in exchange.markets:
@@ -86,32 +104,30 @@ def trade_huobi(coin, exchange):
             for item in balance["data"]["list"]:
                 if "usdt" in item["currency"] and item["type"] == "trade":
                     usdamount = item["balance"]
-            maxBuyAmount = int(float(usdamount) / float(price) * 0.01)
+            maxBuyAmount = int(float(usdamount) / float(price) * 0.8)
             print(maxBuyAmount)
             exchange.createMarketBuyOrder(pair, maxBuyAmount)
             break
 
 
-def init():
-    coininfo = binance_spot.sapiGetCapitalConfigGetall()
-    for i in coininfo:
-        binance_old_coin.append(i["coin"])
+#init
+coininfo = binance_spot.sapiGetCapitalConfigGetall()
+for i in coininfo:
+    binance_old_coin.append(i["coin"])
     
-    for symbol in okex_spot.markets:
-        if "USDT" in symbol:
-            okex_old_symbols.append(symbol)
+coininfo = okex_spot.private_get_asset_currencies()
+for i in coininfo["data"]:
+    okex_old_symbols.append(i["ccy"])
   
-    for symbol in huobipro_spot.markets:
-        if "USDT" in symbol:
-            huobipro_old_symbols.append(symbol)
+coininfo = huobipro_spot.public_get_common_currencys()
+huobipro_old_symbols = coininfo["data"]
 
-init()
 
 while True:
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "START.....")
     time.sleep(5)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "list new coin count:", count)
-    
+    # BINANCE
     try:
         binance_spot.load_markets()
         coininfo = binance_spot.sapiGetCapitalConfigGetall()
@@ -141,12 +157,14 @@ while True:
         sendmsg(str(err))
         pass
 
+    # OKEX
     try:
         okex_spot.load_markets()
+        coininfo = okex_spot.private_get_asset_currencies()
         okex_symbols = []
-        for symbol in okex_spot.markets:
-            if "USDT" in symbol:
-                okex_symbols.append(symbol)
+        for i in coininfo["data"]:
+            okex_symbols.append(i["ccy"])
+
         diff = list(set(okex_symbols) - set(okex_old_symbols))
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                 "okex", 
@@ -158,6 +176,8 @@ while True:
             count = count + 1
             text = "OKEX" + "List New Coin!" + str(diff)
             sendmsg(text)
+            trade_binance(diff[0], binance_spot)
+            trade_huobi(diff[0], huobipro_spot)
         else:
             print("No new coin!")
     except Exception as err:
@@ -165,12 +185,12 @@ while True:
         sendmsg(str(err))
         pass
 
+    # HUOBI
     try:
         huobipro_spot.load_markets()
-        huobipro_symbols = []
-        for symbol in huobipro_spot.markets:
-            if "USDT" in symbol:
-                huobipro_symbols.append(symbol)
+        coininfo = huobipro_spot.public_get_common_currencys()
+        huobipro_symbols = list(coininfo["data"])
+
         diff = list(set(huobipro_symbols) - set(huobipro_old_symbols))
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                 "huobipro", 
@@ -182,6 +202,8 @@ while True:
             count = count + 1
             text = "huobipro" + "List New Coin!" + str(diff)
             sendmsg(text)
+            trade_binance(diff[0], binance_spot)
+            trade_okex(diff[0], okex_spot)
         else:
             print("No new coin!")
     except Exception as err:

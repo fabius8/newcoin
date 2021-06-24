@@ -3,12 +3,16 @@ import json
 import time
 import requests
 import sys
+from bs4 import BeautifulSoup
+import re
 
 config = json.load(open('config.json'))
 
 secretjson = json.load(open('secret.json'))
 corpid = secretjson["corpid"] 
 corpsecret = secretjson["corpsecret"]
+
+errorCount = 0
 
 def sendmsg(text):
     params = {
@@ -56,7 +60,7 @@ def trade_binance(coin, exchange):
     pair = coin + "/USDT"
     for symbol in exchange.markets:
         if pair == symbol:
-            print(exchange, "has new coin list: ", pair)
+            print(exchange, " has new coin list: ", pair)
             price = exchange.fetch_order_book(pair)['asks'][0][0]
             account = exchange.private_get_account()
             usdamount = 0
@@ -67,8 +71,12 @@ def trade_binance(coin, exchange):
                     
             print(price, maxBuyAmount)
             exchange.createMarketBuyOrder(pair, maxBuyAmount)
-            break
-
+            text = str(exchange) + "buy" + pair + str(maxBuyAmount) + "on" + str(price)
+            sendmsg(text)
+            return True
+    text = str(exchange) + "miss"
+    sendmsg(text)
+    return False
 
 def trade_okex(coin, exchange):
     pair = coin + "-USDT"
@@ -85,7 +93,12 @@ def trade_okex(coin, exchange):
                     "ordType":"market",
                     "sz": str(maxBuyAmount * 0.8)
                 })
-            break
+            text = str(exchange) + "buy" + pair + str(maxBuyAmount)
+            sendmsg(text)
+            return True
+    text = str(exchange) + "miss"
+    sendmsg(text)
+    return False
 
 def trade_huobi(coin, exchange):
     pair = coin + "/USDT"
@@ -105,9 +118,27 @@ def trade_huobi(coin, exchange):
                 if "usdt" in item["currency"] and item["type"] == "trade":
                     usdamount = item["balance"]
             maxBuyAmount = int(float(usdamount) / float(price) * 0.8)
-            print(maxBuyAmount)
             exchange.createMarketBuyOrder(pair, maxBuyAmount)
-            break
+            text = str(exchange) + "buy" + pair + str(maxBuyAmount) + "on" + str(price)
+            sendmsg(text)
+            return True
+    text = str(exchange) + "miss"
+    sendmsg(text)
+    return False
+
+def getBinanceAnnCoin():
+    r = requests.get("https://www.binance.com/en/support/announcement")
+    soup = BeautifulSoup(r.text, "html.parser")
+    data = soup.find(id="__APP_DATA")
+    i = json.loads(data.string)["routeProps"]["42b1"]["catalogs"][0]
+    for item in i["articles"]:
+        print(item)
+        info = re.search(r'.* Will List .*\((.*)\)', str(item), re.I)
+        if info:
+            print(info.group(1))
+            return info.group(1)
+    return None
+
 
 
 #init
@@ -126,7 +157,7 @@ huobipro_old_symbols = coininfo["data"]
 while True:
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "START.....")
     time.sleep(5)
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "list new coin count:", count)
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "list new coin count:", count, "error: ", errorCount)
     # BINANCE
     try:
         binance_spot.load_markets()
@@ -134,7 +165,10 @@ while True:
         binance_new_coin = []
         for i in coininfo:
             binance_new_coin.append(i["coin"])
-
+        BAnncoin = getBinanceAnnCoin()
+        if BAnncoin and BAnncoin not in binance_new_coin:
+            text = "Binance announcement new coin!" + str(BAnncoin) + "!"
+            binance_new_coin.append(BAnncoin)
         coin_diff = list(set(binance_new_coin) - set(binance_old_coin))
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                 "binance", 
@@ -145,7 +179,7 @@ while True:
             print(coin_diff)
             binance_old_coin = binance_new_coin
             count = count + 1
-            text = "Binance list new coin: " + str(coin_diff)
+            text += "Binance list new coin: " + str(coin_diff)
             sendmsg(text)
             trade_okex(coin_diff[0], okex_spot)
             trade_huobi(coin_diff[0], huobipro_spot)
@@ -154,7 +188,9 @@ while True:
 
     except Exception as err:
         print(err)
-        sendmsg(str(err))
+        if errorCount < 2:
+            sendmsg(str(err))
+            errorCount += 1
         pass
 
     # OKEX
@@ -182,7 +218,9 @@ while True:
             print("No new coin!")
     except Exception as err:
         print(err)
-        sendmsg(str(err))
+        if errorCount < 2:
+            sendmsg(str(err))
+            errorCount += 1
         pass
 
     # HUOBI
@@ -208,7 +246,9 @@ while True:
             print("No new coin!")
     except Exception as err:
         print(err)
-        sendmsg(str(err))
+        if errorCount < 2:
+            sendmsg(str(err))
+            errorCount += 1
         pass
 
 

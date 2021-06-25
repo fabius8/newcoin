@@ -13,6 +13,7 @@ corpid = secretjson["corpid"]
 corpsecret = secretjson["corpsecret"]
 
 errorCount = 0
+ratio = 0.8
 
 def sendmsg(text):
     params = {
@@ -46,6 +47,31 @@ okex_spot.load_markets()
 huobipro_spot = ccxt.huobipro(config["huobi"])
 huobipro_spot.load_markets()
 
+def getAllbalance(binance, okex, huobipro):
+    # binance
+    account = binance.private_get_account()
+    for item in account["balances"]:
+        if item["asset"] == "USDT":
+            print(binance, ":", "USDT ", item["free"])
+            break
+    # okex
+    account = okex.private_get_account_balance({"ccy": "USDT"})
+    balance = account["data"][0]["details"][0]["availEq"]
+    print(okex, ":", "USDT ", balance)
+    # huobi
+    account_id = huobipro.private_get_account_accounts()
+    id = 0
+    for item in account_id["data"]:
+        if "spot" == item["type"]:
+            id = item["id"]
+    balance = huobipro.private_get_account_accounts_id_balance({"id": id})
+    for item in balance["data"]["list"]:
+        if "usdt" in item["currency"] and item["type"] == "trade":
+            print(huobipro, ":", "USDT ", item["balance"])  
+            break 
+
+getAllbalance(binance_spot, okex_spot, huobipro_spot)
+
 binance_old_coin = []
 binance_new_coin = []
 
@@ -67,7 +93,7 @@ def trade_binance(coin, exchange):
             for item in account["balances"]:
                 if item["asset"] == "USDT":
                     usdamount = item["free"]
-            maxBuyAmount = int(float(usdamount) / float(price) * 0.8)
+            maxBuyAmount = int(float(usdamount) / float(price) * ratio)
                     
             print(price, maxBuyAmount)
             exchange.createMarketBuyOrder(pair, maxBuyAmount)
@@ -91,7 +117,7 @@ def trade_okex(coin, exchange):
                     "tdMode":"cash",
                     "side":"buy",
                     "ordType":"market",
-                    "sz": str(maxBuyAmount * 0.8)
+                    "sz": str(maxBuyAmount * ratio)
                 })
             text = str(exchange) + "buy" + pair + str(maxBuyAmount)
             sendmsg(text)
@@ -117,7 +143,7 @@ def trade_huobi(coin, exchange):
             for item in balance["data"]["list"]:
                 if "usdt" in item["currency"] and item["type"] == "trade":
                     usdamount = item["balance"]
-            maxBuyAmount = int(float(usdamount) / float(price) * 0.8)
+            maxBuyAmount = int(float(usdamount) / float(price) * ratio)
             exchange.createMarketBuyOrder(pair, maxBuyAmount)
             text = str(exchange) + "buy" + pair + str(maxBuyAmount) + "on" + str(price)
             sendmsg(text)
@@ -132,10 +158,8 @@ def getBinanceAnnCoin():
     data = soup.find(id="__APP_DATA")
     i = json.loads(data.string)["routeProps"]["42b1"]["catalogs"][0]
     for item in i["articles"]:
-        print(item)
         info = re.search(r'.* Will List .*\((.*)\)', str(item), re.I)
         if info:
-            print(info.group(1))
             return info.group(1)
     return None
 
@@ -163,11 +187,12 @@ while True:
         binance_spot.load_markets()
         coininfo = binance_spot.sapiGetCapitalConfigGetall()
         binance_new_coin = []
+        text = ""
         for i in coininfo:
             binance_new_coin.append(i["coin"])
         BAnncoin = getBinanceAnnCoin()
         if BAnncoin and BAnncoin not in binance_new_coin:
-            text = "Binance announcement new coin!" + str(BAnncoin) + "!"
+            text += "Binance announcement new coin!" + str(BAnncoin) + "!"
             binance_new_coin.append(BAnncoin)
         coin_diff = list(set(binance_new_coin) - set(binance_old_coin))
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
@@ -187,8 +212,9 @@ while True:
             print("No new coin!")
 
     except Exception as err:
-        print(err)
-        if errorCount < 2:
+        if "binance GET https:" in str(err):
+            print("Time out")
+        else:
             sendmsg(str(err))
             errorCount += 1
         pass

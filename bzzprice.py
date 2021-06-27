@@ -41,7 +41,12 @@ while True:
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "START.....")
     try:
         r = requests.post(url, data = data)
-        bzzprice = float(r.json()['data']['daiPrices'][0]['price'])/1000000000000000000
+        if r.ok:
+            bzzprice = float(r.json()['data']['daiPrices'][0]['price'])/1000000000000000000
+        else:
+            time.sleep(30)
+            print(r)
+            continue
         
         okex_spot.load_markets()
         okexprice = float(okex_spot.fetch_order_book("BZZ/USDT")['asks'][0][0])
@@ -51,14 +56,14 @@ while True:
         spread = (okexprice - bzzprice) / bzzprice
         print(spread)
         if spread > spreadR:
-            text = "bzzprice: " + str(bzzprice)
-            text += "okexprice: " + str(okexprice)
+            text = "bzzprice: " + str(bzzprice) + "\n"
+            text += "okexprice: " + str(okexprice) + "\n"
             text += "okex price is more higher " + str(spread)
             sendmsg(text)
             time.sleep(60*5)
         if spread < -spreadR:
-            text = "bzzprice: " + str(bzzprice)
-            text += "okexprice: " + str(okexprice)
+            text = "bzzprice: " + str(bzzprice) + "\n"
+            text += "okexprice: " + str(okexprice) + "\n"
             text += "okex price is more lower " + str(spread)
             sendmsg(text)
             time.sleep(60*5)
@@ -66,6 +71,7 @@ while True:
     except Exception as err:
         print(err)
         sendmsg(str(err))
+        time.sleep(30)
         pass
     print("\n")
-    time.sleep(8)
+    time.sleep(10)

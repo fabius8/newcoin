@@ -5,6 +5,12 @@ import requests
 import sys
 from bs4 import BeautifulSoup
 import re
+import logging
+logging.basicConfig(level=logging.INFO,
+                    filename='output.log',
+                    datefmt='%Y/%m/%d %H:%M:%S',
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(lineno)d - %(module)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 config = json.load(open('config.json'))
 
@@ -36,7 +42,7 @@ def sendmsg(text):
         }
     }
     r = requests.post(url, params = params, json = data)
-    print(r.json())
+    logging.info(r.json())
 
 
 
@@ -52,12 +58,12 @@ def getAllbalance(binance, okex, huobipro):
     account = binance.private_get_account()
     for item in account["balances"]:
         if item["asset"] == "USDT":
-            print(binance, ":", "USDT ", item["free"])
+            logging.info("%s: USDT %s", binance, item["free"])
             break
     # okex
     account = okex.private_get_account_balance({"ccy": "USDT"})
     balance = account["data"][0]["details"][0]["availEq"]
-    print(okex, ":", "USDT ", balance)
+    logging.info("%s: USDT %s", okex, balance)
     # huobi
     account_id = huobipro.private_get_account_accounts()
     id = 0
@@ -67,7 +73,7 @@ def getAllbalance(binance, okex, huobipro):
     balance = huobipro.private_get_account_accounts_id_balance({"id": id})
     for item in balance["data"]["list"]:
         if "usdt" in item["currency"] and item["type"] == "trade":
-            print(huobipro, ":", "USDT ", item["balance"])  
+            logging.info("%s: USDT %s", huobipro, item["balance"])  
             break 
 
 getAllbalance(binance_spot, okex_spot, huobipro_spot)
@@ -86,7 +92,7 @@ def trade_binance(coin, exchange):
     pair = coin + "/USDT"
     for symbol in exchange.markets:
         if pair == symbol:
-            print(exchange, " has new coin list: ", pair)
+            logging.info("%s has new coinlist: %s", exchange, pair)
             price = exchange.fetch_order_book(pair)['asks'][0][0]
             account = exchange.private_get_account()
             usdamount = 0
@@ -95,12 +101,12 @@ def trade_binance(coin, exchange):
                     usdamount = item["free"]
             maxBuyAmount = int(float(usdamount) / float(price) * ratio)
                     
-            print(price, maxBuyAmount)
+            logging.info("%s %s", price, maxBuyAmount)
             exchange.createMarketBuyOrder(pair, maxBuyAmount)
             text = str(exchange) + "buy" + pair + str(maxBuyAmount) + "on" + str(price)
             sendmsg(text)
             return True
-    text = str(exchange) + "miss"
+    text = str(exchange) + " miss"
     sendmsg(text)
     return False
 
@@ -108,7 +114,7 @@ def trade_okex(coin, exchange):
     pair = coin + "-USDT"
     for symbol in exchange.markets:
         if pair in symbol:
-            print(exchange, "has new coin list: ", pair)
+            logging.info("%s has new coinlist: %s", exchange, pair)
             maxSize = exchange.private_get_account_max_size({"instId": pair, "tdMode": "cash"})
             maxBuyAmount = float(maxSize["data"][0]["maxBuy"])
             if maxBuyAmount > 0:
@@ -122,16 +128,15 @@ def trade_okex(coin, exchange):
             text = str(exchange) + "buy" + pair + str(maxBuyAmount)
             sendmsg(text)
             return True
-    text = str(exchange) + "miss"
+    text = str(exchange) + " miss"
     sendmsg(text)
     return False
 
 def trade_huobi(coin, exchange):
     pair = coin + "/USDT"
     for symbol in exchange.markets:
-        #print(symbol)
         if pair in symbol:
-            print(exchange, "has new coin list: ", pair)
+            logging.info("%s has new coin list: %s", exchange, pair)
             price = exchange.fetch_order_book(pair)['asks'][0][0]
             account_id = exchange.private_get_account_accounts()
             id = 0
@@ -143,12 +148,12 @@ def trade_huobi(coin, exchange):
             for item in balance["data"]["list"]:
                 if "usdt" in item["currency"] and item["type"] == "trade":
                     usdamount = item["balance"]
-            maxBuyAmount = int(float(usdamount) / float(price) * ratio)
+            maxBuyAmount = int(float(usdamount) * ratio)
             exchange.createMarketBuyOrder(pair, maxBuyAmount)
-            text = str(exchange) + "buy" + pair + str(maxBuyAmount) + "on" + str(price)
-            sendmsg(text)
+            text = str(exchange) + "buy " + pair + str(maxBuyAmount) + "on " + str(price)
+            sendmsg(text)          
             return True
-    text = str(exchange) + "miss"
+    text = str(exchange) + " miss"
     sendmsg(text)
     return False
 
@@ -179,9 +184,9 @@ huobipro_old_symbols = coininfo["data"]
 
 
 while True:
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "START.....")
+    print("START.....")
     time.sleep(5)
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "list new coin count:", count, "error: ", errorCount)
+    print("list new coin count: ", count, "err:", errorCount)
     # BINANCE
     try:
         binance_spot.load_markets()
@@ -195,13 +200,13 @@ while True:
             text += "Binance announcement new coin!" + str(BAnncoin) + "!"
             binance_new_coin.append(BAnncoin)
         coin_diff = list(set(binance_new_coin) - set(binance_old_coin))
-        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        print(
                 "binance", 
                 "old coin count:", len(binance_old_coin),
                 "new coin count:", len(binance_new_coin))
 
         if coin_diff:
-            print(coin_diff)
+            logging.info(coin_diff)
             binance_old_coin = binance_new_coin
             count = count + 1
             text += "Binance list new coin: " + str(coin_diff)
@@ -213,7 +218,7 @@ while True:
 
     except Exception as err:
         if "binance GET https:" in str(err):
-            print("Time out")
+            logging.error("Time out")
         else:
             sendmsg(str(err))
             errorCount += 1
@@ -228,12 +233,12 @@ while True:
             okex_symbols.append(i["ccy"])
 
         diff = list(set(okex_symbols) - set(okex_old_symbols))
-        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        print(
                 "okex", 
                 "old count:", len(okex_old_symbols),
                 "new count:", len(okex_symbols))
         if diff:
-            print(diff, len(diff))
+            logging.info("%s %s", diff, len(diff))
             okex_old_symbols = okex_symbols
             count = count + 1
             text = "OKEX" + "List New Coin!" + str(diff)
@@ -243,7 +248,7 @@ while True:
         else:
             print("No new coin!")
     except Exception as err:
-        print(err)
+        logging.error(err)
         if errorCount < 2:
             sendmsg(str(err))
             errorCount += 1
@@ -256,12 +261,11 @@ while True:
         huobipro_symbols = list(coininfo["data"])
 
         diff = list(set(huobipro_symbols) - set(huobipro_old_symbols))
-        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-                "huobipro", 
+        print("huobipro", 
                 "old count:", len(huobipro_old_symbols),
                 "new count:", len(huobipro_symbols))
         if diff:
-            print(diff, len(diff))
+            logging.info("%s %s", diff, len(diff))
             huobipro_old_symbols = huobipro_symbols
             count = count + 1
             text = "huobipro" + "List New Coin!" + str(diff)
@@ -271,7 +275,7 @@ while True:
         else:
             print("No new coin!")
     except Exception as err:
-        print(err)
+        logging.error(err)
         if errorCount < 2:
             sendmsg(str(err))
             errorCount += 1

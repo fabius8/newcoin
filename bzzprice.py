@@ -31,7 +31,7 @@ def sendmsg(text):
     r = requests.post(url, params = params, json = data)
     print(r.json())
 
-spreadR = 0.04
+spreadR = 0.018
 url = "https://api.thegraph.com/subgraphs/name/ethersphere/bzz-price-graph"
 data =  "{\"variables\":{},\"query\":\"{\\n  ethPrices(first: 5) {\\n    price\\n    __typename\\n  }\\n  daiPrices(first: 5) {\\n    price\\n    __typename\\n  }\\n}\\n\"}"
 okex_spot = ccxt.okex5(config["okex"])

@@ -6,6 +6,8 @@ import sys
 from bs4 import BeautifulSoup
 import re
 import logging
+import datetime
+
 logging.basicConfig(level=logging.INFO,
                     filename='output.log',
                     datefmt='%Y/%m/%d %H:%M:%S',
@@ -19,7 +21,7 @@ corpid = secretjson["corpid"]
 corpsecret = secretjson["corpsecret"]
 
 errorCount = 0
-ratio = 0.8
+ratio = 0.95
 
 def sendmsg(text):
     params = {
@@ -184,12 +186,11 @@ huobipro_old_symbols = coininfo["data"]
 
 
 while True:
-    print("START.....")
+    print(datetime.datetime.now())
     time.sleep(5)
     print("list new coin count: ", count, "err:", errorCount)
     # BINANCE
     try:
-        binance_spot.load_markets()
         coininfo = binance_spot.sapiGetCapitalConfigGetall()
         binance_new_coin = []
         text = ""
@@ -217,16 +218,17 @@ while True:
             print("No new coin!")
 
     except Exception as err:
+        logging.error(err)
         if "binance GET https:" in str(err):
             logging.error("Time out")
         else:
-            sendmsg(str(err))
+            if errorCount < 2:
+                sendmsg(str(err))
             errorCount += 1
         pass
 
     # OKEX
     try:
-        okex_spot.load_markets()
         coininfo = okex_spot.private_get_asset_currencies()
         okex_symbols = []
         for i in coininfo["data"]:
@@ -256,7 +258,6 @@ while True:
 
     # HUOBI
     try:
-        huobipro_spot.load_markets()
         coininfo = huobipro_spot.public_get_common_currencys()
         huobipro_symbols = list(coininfo["data"])
 

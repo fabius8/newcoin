@@ -10,13 +10,14 @@ config = json.load(open('config.json'))
 errCount = 0
 binance_announcement_site = "https://www.binance.com/en/support/announcement"
 previousAnn = None
-gateio = {"coinlist":[]}
+gateio = {}
+okex = {}
+interval = 5
 
 def gateioInit(config):
     global gate
     gateio["spot"] = ccxt.gateio(config["gate"])
     gateio["spot"].load_markets()
-
 
 def gateioTrade(coin, gateio):
     usdtQuantity = 500
@@ -24,7 +25,7 @@ def gateioTrade(coin, gateio):
     request = {
         'currency_pair': pair,
     }
-    price = float(gateio["spot"].publicSpotGetOrderBook(request)['asks'][0][0])
+    price = float(gateio["spot"].publicSpotGetOrderBook(request)['asks'][9][0])
     request = {
         'currency_pair': pair,
         'amount': gateio["spot"].amount_to_precision(pair, usdtQuantity/price),
@@ -34,6 +35,23 @@ def gateioTrade(coin, gateio):
     gateio["spot"].privateSpotPostOrders(request)
     return request
 
+def okexInit(config):
+    global okex
+    okex["spot"] = ccxt.okex5(config["okex"])
+    okex["spot"].load_markets()
+
+def okexTrade(coin, okex):
+    usdtQuantity = 500
+    pair = coin + "-USDT"
+    request = {
+        "instId": pair,
+        "tdMode": "cash",
+        "side": "buy",
+        "ordType": "market",
+        "sz": usdtQuantity
+    }
+    okex["spot"].private_post_trade_order(request)
+    return request
 
 def sendmsg(text):
     params = {
@@ -86,6 +104,7 @@ def getBinanceAnnCoin():
 if __name__ == "__main__":
     count = 0
     gateioInit(config)
+    okexInit(config)
     coins = getBinanceAnnCoin()
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"), "Start...")
 
@@ -95,13 +114,23 @@ if __name__ == "__main__":
         text = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") + " count:" + str(count) + " err:" + str(errCount) + "\n"
         for i in coins:
             text += "Binance Announcement List (" + i + ")\n"
+            # Gateio
             try:
                 r = gateioTrade(i, gateio)
                 text += "Gate.io" + " BUY OK\n" + str(r) + "\n"
+                print(text)  
             except Exception as err:
                 text += "Gate.io" + " MISS!" + "\n"
                 print(err)
                 pass
+            # OKEX
+            try:
+                r = okexTrade(i, okex)
+                text += "okex" + " BUY OK\n" + str(r) + "\n"
+                print(text)  
+            except Exception as err:
+                text += "okex" + " MISS!" + "\n"
+                print(err)
+                pass
             sendmsg(text)
-            print(text)
-        time.sleep(0.1)
+        time.sleep(interval)

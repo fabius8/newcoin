@@ -12,7 +12,7 @@ binance_announcement_site = "https://www.binance.com/en/support/announcement"
 previousAnn = None
 gateio = {}
 okex = {}
-interval = 5
+interval = 0.1
 
 def gateioInit(config):
     global gate

@@ -1,14 +1,14 @@
 {
 	"binance": {
-        "apiKey": "",
-        "secret": "",
-        "enableRateLimit": true
-    },
+        	"apiKey": "",
+      	 	"secret": "",
+        	"enableRateLimit": true
+    	},
 	"okex": {
-        "apiKey": "",
-        "secret": "",
+        	"apiKey": "",
+        	"secret": "",
 		"password": "",
-        "enableRateLimit": true
+       		"enableRateLimit": true
 	},
 	"huobi": {
 		"apiKey": "",
@@ -17,5 +17,9 @@
 		"options": {
     		"createMarketBuyOrderRequiresPrice": false
 		}
-	}
+	},
+
+	"corpid": "",
+	"corpsecret": ""
+
 }

@@ -1,4 +1,3 @@
-
 from bs4 import BeautifulSoup
 import re
 import time
@@ -88,20 +87,21 @@ if __name__ == "__main__":
     count = 0
     gateioInit(config)
     coins = getBinanceAnnCoin()
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"), "Start...")
 
     while True:
         count += 1
         coins = getBinanceAnnCoin()
-        text = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") + " count:" + str(count) + " err:" + str(errCount)
+        text = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") + " count:" + str(count) + " err:" + str(errCount) + "\n"
         for i in coins:
+            text += "Binance Announcement List (" + i + ")\n"
             try:
                 r = gateioTrade(i, gateio)
-                text += " gateio" + " buy OK" + str(r)
+                text += "Gate.io" + " BUY OK\n" + str(r) + "\n"
             except Exception as err:
-                text += " gateio" + " MISS!"
+                text += "Gate.io" + " MISS!" + "\n"
                 print(err)
                 pass
-            text += "(Binance Announcement List " + i + " )"
             sendmsg(text)
             print(text)
         time.sleep(0.1)

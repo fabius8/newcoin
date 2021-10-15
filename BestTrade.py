@@ -12,6 +12,7 @@ binance_announcement_site = "https://www.binance.com/en/support/announcement"
 previousAnn = None
 gateio = {}
 okex = {}
+mexc = {}
 interval = 0.1
 
 def gateioInit(config):
@@ -52,6 +53,41 @@ def okexTrade(coin, okex):
     }
     okex["spot"].private_post_trade_order(request)
     return request
+
+# MEXC
+ROOT_URL = 'https://www.mxc.com'
+def get_depth(symbol, depth):
+    """market depth"""
+    method = 'GET'
+    path = '/open/api/v2/market/depth'
+    url = '{}{}'.format(ROOT_URL, path)
+    params = {
+        'symbol': symbol,
+        'depth': depth,
+    }
+    response = requests.request(method, url, params=params)
+    return response.json()
+
+def mexcInit(config):
+    global mexc
+    mexc["spot"] = ccxt.mexc(config["mexc"])
+    mexc["spot"].load_markets()
+
+def mexcTrade(coin, mexc):
+    usdtQuantity = 100
+    pair = coin + "_USDT"
+    data = get_depth(pair, 10)
+    price = float(data["data"]["asks"][9]["price"])
+    request = {
+        'symbol': pair,
+        'price': mexc["spot"].price_to_precision(pair, price),
+        'quantity': mexc["spot"].amount_to_precision(pair, usdtQuantity/price),
+        'trade_type': 'BID',
+        'order_type': 'LIMIT_ORDER'
+    }
+    mexc["spot"].spotPrivatePostOrderPlace(request)
+    return request
+
 
 def sendmsg(text):
     params = {
@@ -105,6 +141,7 @@ if __name__ == "__main__":
     count = 0
     gateioInit(config)
     okexInit(config)
+    mexcInit(config)
     coins = getBinanceAnnCoin()
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"), "Start...")
 
@@ -114,6 +151,7 @@ if __name__ == "__main__":
         text = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") + " count:" + str(count) + " err:" + str(errCount) + "\n"
         for i in coins:
             text += "Binance Announcement List (" + i + ")\n"
+
             # Gateio
             try:
                 r = gateioTrade(i, gateio)
@@ -123,6 +161,16 @@ if __name__ == "__main__":
                 text += "Gate.io" + " MISS!" + "\n"
                 print(err)
                 pass
+            # MEXC
+            try:
+                r = mexcTrade(i, mexc)
+                text += "Mexc" + " BUY OK\n" + str(r) + "\n"
+                print(text)  
+            except Exception as err:
+                text += "Mexc" + " MISS!" + "\n"
+                print(err)
+                pass
+
             # OKEX
             try:
                 r = okexTrade(i, okex)
@@ -132,5 +180,6 @@ if __name__ == "__main__":
                 text += "okex" + " MISS!" + "\n"
                 print(err)
                 pass
+
             sendmsg(text)
         time.sleep(interval)

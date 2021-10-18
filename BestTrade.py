@@ -13,7 +13,7 @@ else:
 
 config = json.load(open('config.json'))
 errCount = 0
-binance_announcement_site = "https://www." + site + "/zh-CN/support/announcement"
+binance_announcement_site = "https://www." + site + "/en/support/announcement"
 previousAnn = None
 gateio = {}
 okex = {}

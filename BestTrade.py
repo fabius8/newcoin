@@ -8,7 +8,7 @@ import ccxt
 
 config = json.load(open('config.json'))
 errCount = 0
-binance_announcement_site = "https://www.binance.com/en/support/announcement"
+binance_announcement_site = "https://www.binancezh.top/en/support/announcement"
 previousAnn = None
 gateio = {}
 okex = {}

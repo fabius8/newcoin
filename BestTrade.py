@@ -6,9 +6,14 @@ import json
 from datetime import datetime
 import ccxt
 
+if len(sys.argv) == 2:
+    site = sys.argv[1]
+else:
+    site = "binancezh.top"
+
 config = json.load(open('config.json'))
 errCount = 0
-binance_announcement_site = "https://www.binancezh.top/en/support/announcement"
+binance_announcement_site = "https://www." + site + "/zh-CN/support/announcement"
 previousAnn = None
 gateio = {}
 okex = {}
@@ -74,7 +79,7 @@ def mexcInit(config):
     mexc["spot"].load_markets()
 
 def mexcTrade(coin, mexc):
-    usdtQuantity = 100
+    usdtQuantity = 500
     pair = coin + "_USDT"
     data = get_depth(pair, 10)
     price = float(data["data"]["asks"][9]["price"])

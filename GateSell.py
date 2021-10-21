@@ -15,7 +15,7 @@ if len(sys.argv) >= 2:
     for i in sys.argv[1:]:
         coinlist.append(i)
 else:
-    print("No sell coin!")
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "No sell coin!")
     sys.exit(0)
 
 def gateioInit(config):
@@ -34,14 +34,19 @@ def gateioSell(coin, quantity, gateio):
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "can't get price", coin)
         pass
         return
-    print(coin, price)
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), coin, price)
     request = {
         'currency_pair': pair,
         'amount': gateio["spot"].amount_to_precision(pair, quantity),
         'price': gateio["spot"].price_to_precision(pair, price),
         'side': "sell",
     }
-    gateio["spot"].privateSpotPostOrders(request)
+    try:
+        gateio["spot"].privateSpotPostOrders(request)
+    except Exception as e:
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e)
+        pass
+        return
     return request
 
 def getAccounts():
@@ -53,15 +58,16 @@ if __name__ == "__main__":
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Check", coinlist)
     gateioInit(config)
     while True:
-        accounts = getAccounts()
         try:
+            accounts = getAccounts()
             for acc in accounts:
                 #print(acc)
                 if acc["currency"] in coinlist:
+                    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), acc["currency"], "Balance:", acc["available"])
                     r = gateioSell(acc["currency"], acc["available"], gateio)
                     if r is not None:
                         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), r)
         except Exception as e:
-            print(e)
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e)
             pass
         time.sleep(3)

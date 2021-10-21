@@ -19,7 +19,7 @@ previousAnn = None
 gateio = {}
 okex = {}
 mexc = {}
-interval = 0.1
+interval = 1
 
 def gateioInit(config):
     global gate

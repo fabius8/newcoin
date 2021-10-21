@@ -34,7 +34,7 @@ def gateioSell(coin, quantity, gateio):
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "can't get price", coin)
         pass
         return
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), coin, price)
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), coin, "price:", price)
     request = {
         'currency_pair': pair,
         'amount': gateio["spot"].amount_to_precision(pair, quantity),

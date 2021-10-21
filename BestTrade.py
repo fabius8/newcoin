@@ -5,6 +5,7 @@ import requests
 import json
 from datetime import datetime
 import ccxt
+import sys
 
 if len(sys.argv) == 2:
     site = sys.argv[1]

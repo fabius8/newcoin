@@ -22,7 +22,7 @@ mexc = {}
 interval = 1
 
 def gateioInit(config):
-    global gate
+    global gateio
     gateio["spot"] = ccxt.gateio(config["gate"])
     gateio["spot"].load_markets()
 

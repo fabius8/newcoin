@@ -187,7 +187,7 @@ huobipro_old_symbols = coininfo["data"]
 
 while True:
     print(datetime.datetime.now())
-    time.sleep(5)
+    time.sleep(1)
     print("list new coin count: ", count, "err:", errorCount)
     # BINANCE
     try:

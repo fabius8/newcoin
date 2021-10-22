@@ -138,6 +138,7 @@ def getBinanceAnnCoin():
         #there is new coin list
         if "Will List" in AnnCoin['title']:
             coins = re.findall(r'\((.*?)\)', AnnCoin['title'])
+            previousAnn = AnnCoin
             return coins
         previousAnn = AnnCoin
         return {}

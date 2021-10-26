@@ -31,10 +31,13 @@ def gateioSell(coin, quantity, gateio):
     try:
         price = float(gateio["spot"].publicSpotGetOrderBook(request)['bids'][9][0])
     except Exception as e:
-        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "can't get price", coin)
+        #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "can't get price", coin)
         pass
         return
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), coin, "price:", price)
+    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), coin, "price:", price)
+    if price * float(quantity) < 1:
+        #print("too small")
+        return
     request = {
         'currency_pair': pair,
         'amount': gateio["spot"].amount_to_precision(pair, quantity),
@@ -63,7 +66,7 @@ if __name__ == "__main__":
             for acc in accounts:
                 #print(acc)
                 if acc["currency"] in coinlist:
-                    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), acc["currency"], "Balance:", acc["available"])
+                    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), acc["currency"], "Balance:", acc["available"])
                     r = gateioSell(acc["currency"], acc["available"], gateio)
                     if r is not None:
                         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), r)

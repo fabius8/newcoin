@@ -15,7 +15,7 @@ def gateioInit(config):
     gateio["spot"].load_markets()
 
 def gateioTrade(coin, gateio):
-    usdtQuantity = 1000
+    usdtQuantity = 10
     pair = coin + "_USDT"
     request = {
         'currency_pair': pair,
@@ -36,7 +36,7 @@ def okexInit(config):
     okex["spot"].load_markets()
 
 def okexTrade(coin, okex):
-    usdtQuantity = 500
+    usdtQuantity = 10
     pair = coin + "-USDT"
     request = {
         "instId": pair,
@@ -67,7 +67,7 @@ def mexcInit(config):
     mexc["spot"].load_markets()
 
 def mexcTrade(coin, mexc):
-    usdtQuantity = 500
+    usdtQuantity = 10
     pair = coin + "_USDT"
     data = get_depth(pair, 10)
     price = float(data["data"]["asks"][9]["price"])
@@ -85,23 +85,37 @@ app = Flask(__name__)
 @app.route('/', methods=['POST'])
 def result():
     data = request.json
+    print(data)
     coins = []
-    coins += re.findall(r'幣安.*上市.*（(.*?)）', data["data"])
-    coins += re.findall(r'Binance.*Will List.*\((.*?)\)', data["data"])
+    if re.findall(r'币安.*上市', data["data"]):
+        coins += re.findall(r'\（(.*?)\）', data["data"])
+    if not coins and re.findall(r'幣安.*上市', data["data"]):
+        coins += re.findall(r'\（(.*?)\）', data["data"])
+    if not coins and re.findall(r'Binance.*Will List', data["data"]):
+        coins += re.findall(r'\((.*?)\)', data["data"])
+    if not coins and re.findall(r'거래.*디지털 자산 추가', data["data"]):
+        tmp = re.findall(r'\((.*)\)', data["data"])
+        if tmp:
+            coins += re.split(', |,', tmp[0])
+    if not coins and re.findall(r'市场数字资产新增', data["data"]):
+        tmp = re.findall(r'（(.*)）', data["data"])
+        if tmp:
+            coins += re.split('、', tmp[0])
+    
     text = ""
-    if coins:
-        print(data)
+    for coin in coins:
+        print(coin)
         try:
-            r = gateioTrade(coins[0], gateio)
+            r = gateioTrade(coin, gateio)
             text = "Gate.io" + " BUY OK\n" + str(r) + "\n"
-            print(text)  
+            print(text)
         except Exception as err:
             text = "Gate.io" + " MISS!" + "\n"
             print(text, err)
             pass
 
         try:
-            r = mexcTrade(coins[0], mexc)
+            r = mexcTrade(coin, mexc)
             text = "Mexc" + " BUY OK\n" + str(r) + "\n"
             print(text)  
         except Exception as err:
@@ -111,7 +125,7 @@ def result():
 
         # OKEX
         try:
-            r = okexTrade(coins[0], okex)
+            r = okexTrade(coin, okex)
             text = "okex" + " BUY OK\n" + str(r) + "\n"
             print(text)  
         except Exception as err:

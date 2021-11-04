@@ -3,6 +3,7 @@ import json
 import ccxt
 import re
 import requests
+from datetime import datetime
 
 config = json.load(open('config.json'))
 gateio = {}
@@ -15,7 +16,8 @@ def gateioInit(config):
     gateio["spot"].load_markets()
 
 def gateioTrade(coin, gateio):
-    usdtQuantity = 10
+    gateio["spot"].load_markets()
+    usdtQuantity = 3500
     pair = coin + "_USDT"
     request = {
         'currency_pair': pair,
@@ -36,7 +38,8 @@ def okexInit(config):
     okex["spot"].load_markets()
 
 def okexTrade(coin, okex):
-    usdtQuantity = 10
+    okex["spot"].load_markets()
+    usdtQuantity = 500
     pair = coin + "-USDT"
     request = {
         "instId": pair,
@@ -67,7 +70,8 @@ def mexcInit(config):
     mexc["spot"].load_markets()
 
 def mexcTrade(coin, mexc):
-    usdtQuantity = 10
+    mexc["spot"].load_markets()
+    usdtQuantity = 700
     pair = coin + "_USDT"
     data = get_depth(pair, 10)
     price = float(data["data"]["asks"][9]["price"])
@@ -107,18 +111,22 @@ def result():
         print(coin)
         try:
             r = gateioTrade(coin, gateio)
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             text = "Gate.io" + " BUY OK\n" + str(r) + "\n"
             print(text)
         except Exception as err:
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             text = "Gate.io" + " MISS!" + "\n"
             print(text, err)
             pass
 
         try:
             r = mexcTrade(coin, mexc)
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             text = "Mexc" + " BUY OK\n" + str(r) + "\n"
             print(text)  
         except Exception as err:
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             text = "Mexc" + " MISS!" + "\n"
             print(text, err)
             pass
@@ -126,9 +134,11 @@ def result():
         # OKEX
         try:
             r = okexTrade(coin, okex)
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             text = "okex" + " BUY OK\n" + str(r) + "\n"
             print(text)  
         except Exception as err:
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             text = "okex" + " MISS!" + "\n"
             print(text, err)
             pass

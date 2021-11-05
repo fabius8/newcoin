@@ -28,8 +28,13 @@ def gateioSell(coin, quantity, gateio):
     request = {
         'currency_pair': pair,
     }
+    if coin + "/USDT" not in gateio["spot"].markets:
+        print("Markets not have ", coin, "reload...")
+        gateio["spot"].load_markets()
+        return
+
     try:
-        price = float(gateio["spot"].publicSpotGetOrderBook(request)['bids'][9][0])
+        price = float(gateio["spot"].publicSpotGetOrderBook(request)['bids'][0][0])
     except Exception as e:
         #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "can't get price", coin)
         pass
@@ -38,6 +43,10 @@ def gateioSell(coin, quantity, gateio):
     if price * float(quantity) < 1:
         #print("too small")
         return
+    time.sleep(120)
+    print("sleep...")
+    gateio["spot"].load_markets()
+    price = float(gateio["spot"].publicSpotGetOrderBook(request)['bids'][0][0])
     request = {
         'currency_pair': pair,
         'amount': gateio["spot"].amount_to_precision(pair, quantity),
@@ -63,13 +72,18 @@ if __name__ == "__main__":
     while True:
         try:
             accounts = getAccounts()
+            #print(accounts)
             for acc in accounts:
-                #print(acc)
                 if acc["currency"] in coinlist:
+                    #print(acc)
                     #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), acc["currency"], "Balance:", acc["available"])
-                    r = gateioSell(acc["currency"], acc["available"], gateio)
-                    if r is not None:
-                        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), r)
+                    try:
+                        r = gateioSell(acc["currency"], acc["available"], gateio)
+                        if r is not None:
+                            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), r)
+                    except exceptions as e:
+                        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e)
+                        pass
         except Exception as e:
             print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e)
             pass

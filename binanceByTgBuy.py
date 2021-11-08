@@ -5,12 +5,13 @@ import re
 import requests
 import time
 from datetime import datetime
+import sys
 
 config = json.load(open('config.json'))
 gateio = {}
 okex = {}
 mexc = {}
-gateio['usdtQuantity'] = 5000
+gateio['usdtQuantity'] = 4000
 mexc['usdtQuantity'] = 2000
 okex['usdtQuantity'] = 500
 
@@ -143,6 +144,8 @@ def result():
     coins = []
     if re.findall(r'币安.*上市', data["data"]):
         coins += re.findall(r'\（(.*?)\）', data["data"])
+    if not coins and re.findall(r'币安将上架', data["data"]):
+        coins += re.findall(r'\((.*?)\)', data["data"])
     if not coins and re.findall(r'幣安.*上市', data["data"]):
         coins += re.findall(r'\（(.*?)\）', data["data"])
     if not coins and re.findall(r'Binance.*Will List', data["data"]):
@@ -159,6 +162,7 @@ def result():
     text = ""
     for coin in coins:
         print(coin)
+        #sys.exit(0)
         try:
             r = gateioTrade(coin, gateio)
             print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

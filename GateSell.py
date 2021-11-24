@@ -9,19 +9,49 @@ import sys
 
 coinlist = []
 gateio = {}
-config = json.load(open('config.json'))
+
+f = open("coinlist.txt")
+lines = f.readlines()
+for line in lines:
+    line = line.strip('\n')
+    line = line.split(" ")
+    for i in line:
+        if i == "":
+            continue
+        coinlist.append(i)
+f.close()
+
+#print(coinlist)
 
 if len(sys.argv) >= 2:
-    for i in sys.argv[1:]:
-        coinlist.append(i)
+    config = json.load(open(sys.argv[1]))
 else:
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "No sell coin!")
-    sys.exit(0)
+    config = json.load(open('config.json'))
+
+print(config["gate"]["name"])
 
 def gateioInit(config):
     global gateio
     gateio["spot"] = ccxt.gateio(config["gate"])
     gateio["spot"].load_markets()
+
+# gate buy
+def gateioBuy(coin, gateio):
+    gateio["spot"].load_markets()
+    usdtQuantity = 50
+    pair = coin + "_USDT"
+    request = {
+        'currency_pair': pair,
+    }
+    price = float(gateio["spot"].publicSpotGetOrderBook(request)['asks'][9][0])
+    request = {
+        'currency_pair': pair,
+        'amount': gateio["spot"].amount_to_precision(pair, usdtQuantity/price),
+        'price': gateio["spot"].price_to_precision(pair, price),
+        'side': "buy",
+    }
+    gateio["spot"].privateSpotPostOrders(request)
+    return request
 
 def gateioSell(coin, quantity, gateio):
     pair = coin + "_USDT"
@@ -29,7 +59,8 @@ def gateioSell(coin, quantity, gateio):
         'currency_pair': pair,
     }
     if coin + "/USDT" not in gateio["spot"].markets:
-        print("Markets not have ", coin, "reload...")
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Markets not have ", coin, "reload...")
+        gateio["spot"] = ccxt.gateio(config["gate"])
         gateio["spot"].load_markets()
         return
 
@@ -43,8 +74,8 @@ def gateioSell(coin, quantity, gateio):
     if price * float(quantity) < 1:
         #print("too small")
         return
+    print("wait 120s to sell ...")
     time.sleep(120)
-    print("sleep...")
     gateio["spot"].load_markets()
     price = float(gateio["spot"].publicSpotGetOrderBook(request)['bids'][0][0])
     request = {

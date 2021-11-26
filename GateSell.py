@@ -9,6 +9,7 @@ import sys
 
 coinlist = []
 gateio = {}
+openlist = {}
 
 f = open("coinlist.txt")
 lines = f.readlines()
@@ -21,6 +22,10 @@ for line in lines:
         coinlist.append(i)
 f.close()
 
+for i in coinlist:
+    openlist[i] = 0
+
+print(openlist)
 #print(coinlist)
 
 if len(sys.argv) >= 2:
@@ -38,7 +43,7 @@ def gateioInit(config):
 # gate buy
 def gateioBuy(coin, gateio):
     gateio["spot"].load_markets()
-    usdtQuantity = 50
+    usdtQuantity = 100
     pair = coin + "_USDT"
     request = {
         'currency_pair': pair,
@@ -59,7 +64,7 @@ def gateioSell(coin, quantity, gateio):
         'currency_pair': pair,
     }
     if coin + "/USDT" not in gateio["spot"].markets:
-        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Markets not have ", coin, "reload...")
+        #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Markets not have ", coin, "reload...")
         gateio["spot"] = ccxt.gateio(config["gate"])
         gateio["spot"].load_markets()
         return
@@ -74,6 +79,12 @@ def gateioSell(coin, quantity, gateio):
     if price * float(quantity) < 1:
         #print("too small")
         return
+    print(openlist)
+    # if openlist[coin] == 0:
+    #     r = gateioBuy(coin, gateio)
+    #     print("gate buy: ", r)
+    #     openlist[coin] = 1
+    #     return
     print("wait 120s to sell ...")
     time.sleep(120)
     gateio["spot"].load_markets()

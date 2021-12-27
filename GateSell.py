@@ -9,24 +9,26 @@ import sys
 
 coinlist = []
 gateio = {}
-openlist = {}
 
-f = open("coinlist.txt")
-lines = f.readlines()
-for line in lines:
-    line = line.strip('\n')
-    line = line.split(" ")
-    for i in line:
-        if i == "":
-            continue
-        coinlist.append(i)
-f.close()
+def coinlistInit():
+    global coinlist
+    f = open("coinlist.txt")
+    lines = f.readlines()
+    tmp = []
+    for line in lines:
+        line = line.strip('\n')
+        line = line.split(" ")
+        for i in line:
+            if i == "":
+                continue
+            tmp.append(i)
+    if tmp != coinlist:
+        coinlist = tmp
+        print("coinlist:", coinlist)
+    f.close()
 
-for i in coinlist:
-    openlist[i] = 0
 
-print(openlist)
-#print(coinlist)
+    
 
 if len(sys.argv) >= 2:
     config = json.load(open(sys.argv[1]))
@@ -79,14 +81,9 @@ def gateioSell(coin, quantity, gateio):
     if price * float(quantity) < 1:
         #print("too small")
         return
-    print(openlist)
-    # if openlist[coin] == 0:
-    #     r = gateioBuy(coin, gateio)
-    #     print("gate buy: ", r)
-    #     openlist[coin] = 1
-    #     return
-    print("wait 120s to sell ...")
-    time.sleep(120)
+   
+    print("wait 70s to sell ...")
+    time.sleep(70)
     gateio["spot"].load_markets()
     price = float(gateio["spot"].publicSpotGetOrderBook(request)['bids'][0][0])
     request = {
@@ -98,21 +95,27 @@ def gateioSell(coin, quantity, gateio):
     try:
         gateio["spot"].privateSpotPostOrders(request)
     except Exception as e:
-        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e)
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e, "44")
         pass
         return
     return request
 
 def getAccounts():
     request = {}
-    accounts = gateio["spot"].privateSpotGetAccounts(request)
+    try:
+        accounts = gateio["spot"].privateSpotGetAccounts(request)
+    except Exception as e:
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e, "getAccounts")
+        pass
     return accounts
 
 if __name__ == "__main__":
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Check", coinlist)
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "start...")
+    coinlistInit()
     gateioInit(config)
     while True:
         try:
+            coinlistInit()
             accounts = getAccounts()
             #print(accounts)
             for acc in accounts:
@@ -124,9 +127,9 @@ if __name__ == "__main__":
                         if r is not None:
                             print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), r)
                     except exceptions as e:
-                        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e)
+                        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e, "33")
                         pass
         except Exception as e:
-            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e)
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e, "22")
             pass
         time.sleep(3)

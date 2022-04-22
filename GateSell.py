@@ -130,6 +130,6 @@ if __name__ == "__main__":
                         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e, "33")
                         pass
         except Exception as e:
-            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e, "22")
+            #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), e, "22")
             pass
         time.sleep(3)
